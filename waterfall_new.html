@@ -1,0 +1,225 @@
+
+<!-- TODO kreslit pngcka do canvas namiesto do tabulky
+ 
+ drawing = new Image();
+ drawing.src = "draw.png";
+ context.drawImage(drawing,0,0);
+ 
+ !-->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+	<title></title>
+</head>
+	
+	<style>
+		h1 {
+			text-align: center;
+		}
+		
+		ul#spectrum {
+			list-style: none;
+			text-align: center;
+			margin: 0px auto;
+			padding: 0px;
+			overflow: hidden;
+			font-size:0;
+		}
+
+		li {
+			display: block;
+			margin: 0px;
+			padding: 0px;
+			line-height: 0px;
+			font-size:0;
+		}
+		
+		img {
+			margin: 0px;
+			padding: 0px;
+		}
+		
+		ul { border: 2px solid #000; position:absolute; top:150;left:150; }
+		</style>
+	
+	<script>
+		var resolution = 128;
+		var samples = 64;
+		var waterfall = new Array();
+		var sqsize;
+		var speed;
+		var oldSpeed = 0;
+		var updateTimer = "";
+		var c = document.createElement('canvas');
+		
+		// shortcut
+		function _(element) { 
+			return document.getElementById(element); 
+		}
+		
+		// return random number between min and max
+		function getRandom (min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+		
+		// insert new random value to array
+		function insertWF() {
+			if (waterfall.length < samples) {
+				var insert = [];
+				for (var i = 0; i < resolution; i++) insert[i] = getRandom(1, 255);
+				waterfall.unshift(insert);
+			}
+			else {
+				waterfall.pop();
+				insertWF();
+			}
+		}
+		
+		// draw waterfall
+		function displayWF() {
+			sqsize = _("sqsizeSlider").value;
+			speed  = _("speedSlider").value;
+			resolution = _("resolutionSlider").value;
+			samples    = _("samplesSlider").value;
+			
+			_("sqsize").innerHTML = "Sqsize: " + sqsize;
+			_("speed").innerHTML  = "Speed: " + 1000/(1000 - speed) + " Hz";
+			_("resolution").innerHTML  = "Resolution: " + resolution;
+			_("samples").innerHTML     = "samples: " + samples;
+			
+			// set speed of waterfall
+			if(speed != oldSpeed) {
+				clearInterval(updateTimer);
+				updateTimer = setInterval(function() { updateWF()}, 1000 - speed);
+				oldSpeed = speed;
+			}
+			
+			// c is globally defined context
+			var ctx = c.getContext("2d");
+			
+			c.width  = resolution * sqsize;
+			c.height = sqsize;
+			
+			ctx.clearRect(0, 0, ctx.width, ctx.height);
+			
+			for (var j = 0; j < resolution; j++) {
+				ctx.fillStyle="rgb(" + waterfall[0][j] + ",50,50)";
+				ctx.fillRect(j * sqsize, 0, sqsize, sqsize);
+			}
+			
+			// create png from canvas 
+			var img = c.toDataURL("image/png");			
+			
+			// create li entry with image 
+			var li = document.createElement("li");
+			var liImg = document.createElement("img");
+			liImg.setAttribute('src', img);
+			li.appendChild(liImg);
+			
+			// append li to spectrum
+			spectrum = _("spectrum");
+			spectrum.appendChild(li);
+			spectrum.insertBefore(li, spectrum.firstChild);
+			
+			// delete last entry, if spectrum is full
+			var children = spectrum.childNodes.length;
+			while (children > samples) {
+				spectrum.removeChild(spectrum.lastChild);
+				children = spectrum.childNodes.length;
+			}
+		}
+		
+		
+		// periodically called function which inserts new value
+		// and redraw the waterfall
+		function updateWF() {
+			insertWF();
+			displayWF();
+		}
+		
+		window.onload = function ()
+		{
+			// populate array with values
+			for (var i = 0; i < samples; i++) {
+				insertWF();
+			}
+			
+			// start waterfall
+			toggleWF();
+		}
+		
+		// start / stop waterfall
+		function toggleWF() {
+			if(updateTimer == "")
+			{
+				updateTimer = setInterval( function() { updateWF() }, speed);
+				_("toggleButton").innerHTML = "Pause";
+			}
+			else
+			{
+				clearInterval(updateTimer);
+				updateTimer = "";
+				_("toggleButton").innerHTML = "Resume";
+			}
+		}
+		
+		// save screenshot as png in "screenshots" div
+		function saveImg() {
+			var now = new Date();
+			
+			// create hidden canvas
+			var buffer = document.createElement('canvas');
+			buffer.width  = sqsize * resolution;
+			buffer.height = sqsize * samples;
+			context = buffer.getContext('2d');
+			
+			// draw all data from array
+			for (var i = 0; i < samples; i++) {
+				for (var j = 0; j < resolution; j++) {
+					context.fillStyle="rgb(" + waterfall[i][j] + ",50,50)";
+					context.fillRect(j * sqsize, i * sqsize, sqsize, sqsize);
+				}
+			}
+			
+			// convert canvas to png
+			var img = buffer.toDataURL("image/png");
+			_("screenshots").innerHTML += '<img alt="' + now + '" src="' + img + '"/> ' + now + '<br>';
+		}
+		
+		
+		</script>
+	
+	<body>
+		
+		<div> 
+			
+			square size <input id="sqsizeSlider" type ="range" min ="1" max="20" step ="1" value ="2"/> 
+			
+			<div id="sqsize"></div>
+			speed <input id="speedSlider" type ="range" min ="0" max="1000" step ="50" value ="750"/> 
+			
+			<div id="speed"></div>
+			resolution <input id="resolutionSlider" type ="range" min ="1" max="1000" step ="1" value ="128"/> 
+			
+			<div id="samples"></div>
+			samples <input id="samplesSlider" type ="range" min ="0" max="1000" step ="1" value ="64"/> 
+			
+			<div id="resolution"></div>
+		
+			<button autofocus="autofocus" id="toggleButton" onclick="JavaScript:toggleWF()">Pause</button>
+			<button id="capture" onclick="JavaScript:saveImg()">Capture</button>
+			
+		</div>
+		
+		<div id="graf"></div>
+		
+		<ul id="spectrum">
+		</ul>
+
+		<br>
+		<br>
+		
+		
+		<div id="screenshots"></div>
+		
+		
+	</body> </html>

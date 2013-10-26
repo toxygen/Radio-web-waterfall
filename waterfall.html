@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+	<title></title>
+</head>
+	
+	<script>
+		var resolution = 48;
+		var samples = 64;
+		var waterfall = new Array();
+		var sqsize = 5;
+		var updateTimer = "";
+		var oldSpeed = 0;
+		
+		function getRandom (min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+		
+		function insertWF() {
+			if (waterfall.length < samples) {
+				var insert = [];
+				for (var i = 0; i < resolution; i++) insert[i] = getRandom(1, 255);
+				waterfall.unshift(insert);
+			}
+			else {
+				waterfall.pop();
+				insertWF();
+			}
+		}
+		
+		function displayWF() {
+			sqsize = document.getElementById("sqsizeSlider").value;
+			speed  = document.getElementById("speedSlider").value;
+			resolution  = document.getElementById("resolutionSlider").value;
+			
+			document.getElementById("sqsize").innerHTML = "Sqsize: " + sqsize;
+			document.getElementById("speed").innerHTML  = "Speed: " + speed;
+			document.getElementById("resolution").innerHTML  = "Resolution: " + resolution;
+			
+			if(speed != oldSpeed)
+			{
+				clearInterval(updateTimer);
+				updateTimer = setInterval(function() { updateWF()}, speed);
+				oldSpeed = speed;
+			}
+			
+			var c   = document.getElementById("myCanvas");
+			var ctx = c.getContext("2d");
+			
+			c.width  = resolution * sqsize;
+			c.height = samples * sqsize;
+			
+			ctx.clearRect(0, 0, ctx.width, ctx.height);
+			
+			for (var i = 0; i < samples; i++)
+			{
+				for (var j = 0; j < resolution; j++)
+				{
+					ctx.fillStyle="rgb(" + waterfall[i][j] + ",50,50)";
+					ctx.fillRect(j * sqsize, i * sqsize, sqsize, sqsize);
+				}
+			}
+			
+			//var img = c.toDataURL("image/png");
+			//			document.getElementById("images").innerHTML += '<img src="'+img+'"/>';
+		}
+		
+		function updateWF() {
+			insertWF();
+			displayWF();
+		}
+		
+		window.onload = function ()
+		{
+			toggleWF();
+		}
+		
+		function toggleWF() {
+			if(updateTimer == "")
+			{
+				updateTimer = setInterval( function() { updateWF() }, speed);
+				document.getElementById("toggleButton").innerHTML = "Pause";
+			}
+			else
+			{
+				clearInterval(updateTimer);
+				updateTimer = "";
+				document.getElementById("toggleButton").innerHTML = "Resume";
+			}
+		}
+		
+		function saveImg() {
+			var now = new Date();
+			var canvas = document.getElementById("myCanvas");
+			var img = canvas.toDataURL("image/png");
+			document.getElementById("screenshots").innerHTML += '<img alt="' + now + '" src="' + img + '"/> ' + now + '<br>';
+		}
+		
+		for (var i = 0; i < samples; i++)
+		{
+			insertWF();
+		}
+		
+		
+		
+		
+		</script>
+	
+	<body>
+		
+		<div> 
+			square size <input id="sqsizeSlider" type ="range" min ="1" max="20" step ="1" value ="3"/> 
+			
+			<div id="sqsize"></div>
+			
+			speed <input id="speedSlider" type ="range" min ="0" max="1000" step ="50" value ="500"/> 
+			
+			<div id="speed"></div>
+			
+			resolution <input id="resolutionSlider" type ="range" min ="0" max="1000" step ="1" value ="48"/> 
+			
+			<div id="resolution"></div>
+			
+			
+			<button autofocus="autofocus" id="toggleButton" onclick="JavaScript:toggleWF()">Pause</button>
+			<button id="capture" onclick="JavaScript:saveImg()">Capture</button>
+			
+		</div>
+		
+		<div id="graf"></div>
+		
+		
+		<canvas id="myCanvas" width="100" height="640" style="solid #c3c3c3;">
+			Your browser does not support the HTML5 canvas tag.
+		</canvas>
+		
+		<hr>
+		
+		<div id="images">aoeu</div>
+		
+		<div id="screenshots"></div>
+		
+		<script src="js/riffwave.js"></script>
+		<script>
+			
+			function play_tone(freq) {
+				
+				var samples = [];
+				var samples_length = 44100;            // 1 second (44.1 KHz)
+				for (var i=0; i<samples_length; i++) { // fills array with samples
+					var t = i/samples_length;            // time from 0 to 1
+														 // Generate samples using sine wave equation (between 0 and 255)
+					samples[i] = 128+Math.round(127*Math.sin(freq*2*Math.PI*t));
+				}
+				
+				var wave = new RIFFWAVE();          // Create raw wav file
+				wave.header.sampleRate = 44100; // 44.1Khz (1 second)
+				wave.header.numChannels = 1;    // 1 channel (mono)
+				wave.Make(samples);
+				
+				var audio = new Audio();    // Create <audio> tag
+				audio.src=wave.dataURI;
+				//audio.play();
+				
+			}
+			
+			play_tone(440); // Frequency 440 Hz = "A" note
+			
+			</script>
+		
+	</body> </html>
